@@ -1,0 +1,312 @@
+import { selectUser } from "@/redux/features/auth/auth.selectores";
+import { getChats, uploadChatMedia } from "@/redux/features/chat/chat.thunk";
+import { socket } from "@/utils/socket";
+import { useCallback, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import ChatSidebar from "./ChatSidebar";
+import ChastList from "./ChastList";
+import ChatWindow from "./ChatWindow";
+import Templates from "./Templates";
+import CreateBroadcast from "./CreateBroadcast";
+import AutoReminders from "./AutoReminders";
+import { getAllCoachesByAdminId } from "@/redux/features/admins/admin.thunk";
+import { selectAllCoaches } from "@/redux/features/coach/coach.selector";
+
+export default function Chats() {
+  const user = useSelector(selectUser);
+  const dispatch = useDispatch();
+  const clients = useSelector(selectAllCoaches);
+  const [showChatWindow, setShowChatWindow] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(
+    typeof window !== "undefined" ? window.innerWidth >= 1024 : true,
+  );
+
+  const [client, setChatClient] = useState(null);
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [unreadCounts, setUnreadCounts] = useState({});
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+
+  const getPrivateRoomId = (u1, u2) => `private:${[u1, u2].sort().join("_")}`;
+
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const clearUnreadForUser = useCallback((chatUserId) => {
+    if (!chatUserId) return;
+
+    setUnreadCounts((prev) => {
+      if (!prev[chatUserId]) return prev;
+      const next = { ...prev };
+      delete next[chatUserId];
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!user?._id) return;
+
+    dispatch(getAllCoachesByAdminId({ adminId: user?._id, page: 1, limit: 100 }));
+
+    socket.auth = {
+      userId: user?._id,
+      token: localStorage.getItem("token"),
+    };
+
+    socket.connect();
+
+    socket.on("online_users", (users) => {
+      setOnlineUsers(users);
+    });
+
+    socket.emit("get_online_users", (users) => {
+      setOnlineUsers(users);
+    });
+
+    return () => {
+      socket.off("online_users");
+      socket.disconnect();
+    };
+  }, [dispatch, user?._id]);
+
+  const chatClient = (selectedClient) => {
+    if (client) {
+      const prevRoom = getPrivateRoomId(user?._id, client?._id);
+      socket.emit("leave_room", { roomId: prevRoom });
+    }
+
+    const roomId = getPrivateRoomId(user?._id, selectedClient?._id);
+    socket.emit("join_room", { roomId });
+    setMessages([]);
+    setChatClient(selectedClient);
+    setShowChatWindow(true);
+    clearUnreadForUser(selectedClient?._id);
+  };
+
+  const handleBackToList = () => {
+    setShowChatWindow(false);
+  };
+
+  useEffect(() => {
+    if (!client) return;
+
+    dispatch(
+      getChats({
+        page: 1,
+        limit: 30,
+        chatId: getPrivateRoomId(user?._id, client?._id),
+      })
+    )
+      .unwrap()
+      .then((response) => {
+        setMessages(Array.isArray(response?.messages) ? response.messages : []);
+      })
+      .catch(() => {
+        setMessages([]);
+      });
+  }, [client, user?._id, dispatch]);
+
+  useEffect(() => {
+    const onNewMessage = (msg) => {
+      if (!msg?.roomId) return;
+
+      const selectedRoom = client
+        ? getPrivateRoomId(user?._id, client?._id)
+        : null;
+      const roomMatchesSelected = Boolean(
+        selectedRoom && msg.roomId === selectedRoom,
+      );
+      const isIncoming = msg.sender !== user?._id;
+      const partnerId = isIncoming ? msg.sender : msg.reciever;
+      const chatWindowVisible = isDesktop || showChatWindow;
+
+      if (roomMatchesSelected) {
+        setMessages((prev) => [...prev, msg]);
+
+        if (isIncoming && !chatWindowVisible && partnerId) {
+          setUnreadCounts((prev) => ({
+            ...prev,
+            [partnerId]: (prev[partnerId] || 0) + 1,
+          }));
+        }
+
+        if (isIncoming && chatWindowVisible) {
+          clearUnreadForUser(partnerId);
+        }
+        return;
+      }
+
+      if (isIncoming && partnerId) {
+        setUnreadCounts((prev) => ({
+          ...prev,
+          [partnerId]: (prev[partnerId] || 0) + 1,
+        }));
+      }
+    };
+
+    socket.on("new_message", onNewMessage);
+    return () => socket.off("new_message", onNewMessage);
+  }, [client, clearUnreadForUser, isDesktop, showChatWindow, user?._id]);
+
+  const sendSocketMessage = useCallback(
+    ({
+      text = "",
+      messageType = "text",
+      mediaUrl = "",
+      mediaMeta = {},
+    } = {}) => {
+      if (!client) return;
+
+      const roomId = getPrivateRoomId(user?._id, client?._id);
+      const trimmedText = text.trim();
+      const hasMedia = Boolean(mediaUrl);
+
+      if (!trimmedText && !hasMedia) return;
+
+      socket.emit(
+        "send_message",
+        {
+          roomId,
+          text: trimmedText,
+          reciever: client?._id,
+          messageType,
+          mediaUrl,
+          mediaMeta,
+        },
+        (ack) => {
+          if (!ack?.ok) console.error(ack?.error || "Message failed");
+        }
+      );
+    },
+    [client, user?._id]
+  );
+
+  const messageHandlers = () => {
+    if (!message.trim()) return;
+    sendSocketMessage({ text: message, messageType: "text" });
+    setMessage("");
+  };
+
+  const uploadAndSendMedia = useCallback(
+    async (file, messageType, mediaMeta = {}) => {
+      if (!file || !client) return;
+
+      setIsUploadingMedia(true);
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const uploadResponse = await dispatch(
+          uploadChatMedia({ formData })
+        ).unwrap();
+
+        if (!uploadResponse?.url) {
+          throw new Error("Upload response missing media URL");
+        }
+
+        sendSocketMessage({
+          messageType,
+          mediaUrl: uploadResponse.url,
+          mediaMeta: {
+            name: uploadResponse.name || file.name,
+            mimeType: uploadResponse.mimeType || file.type,
+            size: uploadResponse.size || file.size,
+            ...mediaMeta,
+          },
+        });
+      } catch (error) {
+        console.error("Media upload failed:", error);
+      } finally {
+        setIsUploadingMedia(false);
+      }
+    },
+    [client, dispatch, sendSocketMessage]
+  );
+
+  const handleImageUpload = async (file) => {
+    if (!file?.type?.startsWith("image/")) return;
+    await uploadAndSendMedia(file, "image");
+  };
+
+  const handleVoiceUpload = async (audioBlob, durationInSeconds = 0) => {
+    if (!audioBlob) return;
+
+    const extension =
+      audioBlob.type?.split("/")[1]?.split(";")[0] || "webm";
+    const file = new File([audioBlob], `voice-${Date.now()}.${extension}`, {
+      type: audioBlob.type || "audio/webm",
+    });
+
+    await uploadAndSendMedia(file, "voice", {
+      duration: durationInSeconds,
+    });
+  };
+
+  const [sideTab, setSideTab] = useState("Chats");
+  const handleSideTabs = (tabName) => {
+    setSideTab(tabName);
+  };
+
+  return (
+    <div className="flex h-[calc(100vh-120px)]  gap-5">
+      {/* Left Sidebar */}
+      {/* <ChatSidebar
+        clients={clients}
+        handleSideTabs={handleSideTabs}
+        sideTab={sideTab}
+      /> */}
+
+      {/* Right - Content based on tab */}
+      {sideTab === "Templates" ? (
+        <Templates />
+      ) : sideTab === "Create Broadcast" ? (
+        <CreateBroadcast onCancel={() => handleSideTabs("Chats")} />
+      ) : sideTab === "Auto Reminders" ? (
+        <AutoReminders />
+      ) : (
+        <>
+          <div
+            className={`${
+              showChatWindow ? "hidden lg:block" : "block"
+            } w-full lg:w-80`}
+          >
+            {/* Center - Chat List */}
+            <ChastList
+              clients={clients}
+              chatClient={chatClient}
+              client={client}
+              onlineUsers={onlineUsers}
+              unreadCounts={unreadCounts}
+            />
+          </div>
+
+          <div
+            className={`${
+              showChatWindow ? "block" : "hidden lg:block"
+            } w-full lg:flex-1`}
+          >
+            {/* Right - Chat Window */}
+            <ChatWindow
+              client={client}
+              messages={messages}
+              message={message}
+              setMessage={setMessage}
+              messageHandlers={messageHandlers}
+              user={user}
+              onlineUsers={onlineUsers}
+              onBack={handleBackToList}
+              handleImageUpload={handleImageUpload}
+              handleVoiceUpload={handleVoiceUpload}
+              isUploadingMedia={isUploadingMedia}
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

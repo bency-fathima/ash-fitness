@@ -1,0 +1,358 @@
+import React, { useEffect, useState } from "react";
+import {   useParams } from "react-router-dom";
+import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
+ import { useDispatch } from "react-redux";
+ import { getTherapyPlanById } from "@/redux/features/therapy/therapy.thunk";
+
+export default function TherapyViewPlan() {
+  
+  const dispatch = useDispatch();
+  const { id } = useParams();
+  
+  const [weeks, setWeeks] = useState([]);
+  const [programDetails, setProgramDetails] = useState(null);
+  
+  const fetchPlanById = async () => {
+    try {
+      const res = await dispatch(getTherapyPlanById(id));
+      
+      if (!res.payload || !res.payload.weeks) return;
+      
+      const plan = res.payload;
+      
+      const allMedia = new Map();
+      
+      plan.weeks?.forEach((week) => {
+        week.days?.forEach((day) => {
+          day.therapies?.forEach((th) => {
+            if (th.mediaName && th.url) {
+              if (!allMedia.has(th.url)) {
+                allMedia.set(th.url, {
+                  name: th.mediaName,
+                  url: th.url,
+                  type: th.url.toLowerCase().includes(".pdf") ? "pdf" : "video",
+                });
+              }
+            }
+          });
+        });
+      });
+      
+      setProgramDetails({
+        name: plan.name,
+        planMedia: Array.from(allMedia.values()),
+      });
+
+      const formattedWeeks = plan.weeks.map((week, wIdx) => ({
+        ...week,
+        id: week?._id,
+        expanded: wIdx === 0,
+        days: week.days.map((day, dIdx) => ({
+          ...day,
+          id: day?._id,
+          expanded: dIdx === 0,
+          therapyPlan: day.therapies,
+        })),
+      }));
+
+      setWeeks(formattedWeeks);
+     } catch (err) {
+      console.error("Fetch therapy plan error", err);
+    }
+  };
+
+  
+  useEffect(() => {
+    if (!id) return;
+    fetchPlanById();
+  }, [id]);
+
+ 
+ 
+  const toggleWeek = (id) => {
+    setWeeks(
+      weeks.map((week) =>
+        week.id === id ? { ...week, expanded: !week.expanded } : week,
+      ),
+    );
+  };
+
+  const toggleDay = (weekId, dayId) => {
+    setWeeks(
+      weeks.map((week) => {
+        if (week.id === weekId) {
+          return {
+            ...week,
+            days: week.days.map((day) =>
+              day.id === dayId ? { ...day, expanded: !day.expanded } : day,
+            ),
+          };
+        }
+        return week;
+      }),
+    );
+  };
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-6 p-6 min-h-screen bg-[#F8F9FA]">
+      {/* Left Content - Main Details */}
+      <div className="flex-1 flex flex-col gap-6">
+     
+
+         <h2 className="text-lg font-bold text-[#9e5608]">
+          Weekly Plan Structure
+        </h2>
+
+        {/* Weeks List */}
+        <div className="flex flex-col gap-4">
+          {weeks.map((week) => (
+            <div
+              key={week.id}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm"
+            >
+              {/* Week Header */}
+              <div className="p-4 flex items-center justify-between bg-white rounded-t-2xl border-b border-gray-50">
+                <h3 className="text-base font-bold text-[#011412]">
+                  {week.name}
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button className="p-1 text-gray-400 hover:text-gray-600">
+                    <MoreHorizontal size={18} />
+                  </button>
+                  <button
+                    onClick={() => toggleWeek(week.id)}
+                    className="p-1.5 hover:bg-gray-50 rounded-lg text-[#66706D] transition-colors"
+                  >
+                    {week.expanded ? (
+                      <ChevronUp size={18} />
+                    ) : (
+                      <ChevronDown size={18} />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {week.expanded && (
+                <div className="p-4 pt-2">
+                  {/* Week Title */}
+                  {week.title && (
+                    <div className="mb-4 pt-2">
+                      <p className="text-sm text-[#011412] font-medium">
+                        {week.title}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Days List */}
+                  <div className="flex flex-col gap-3">
+                    {week.days.map((day) => (
+                      <div
+                        key={day.id}
+                        className="border border-gray-100 rounded-xl overflow-hidden"
+                      >
+                        {/* Day Header */}
+                        <div className="p-3 flex items-center justify-between bg-gray-50/50">
+                          <span className="text-sm font-bold text-[#011412]">
+                            {day.name}
+                          </span>
+                          <button
+                            onClick={() => toggleDay(week.id, day.id)}
+                            className="p-1 hover:bg-white rounded-lg text-[#66706D] transition-colors"
+                          >
+                            {day.expanded ? (
+                              <ChevronUp size={16} />
+                            ) : (
+                              <ChevronDown size={16} />
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Day Content */}
+                             {day.expanded && day.therapyPlan?.length > 0 && (
+                          <div className="p-4 bg-white">
+                            <TherapyPlanSection therapyPlan={day.therapyPlan} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right Sidebar */}
+      <div className="lg:w-80 flex flex-col gap-4">
+        {/* Plan Media */}
+        <div
+          className={`bg-white p-5 rounded-2xl border border-gray-100 shadow-sm ${programDetails?.planMedia?.length > 0 ? "" : "min-h-[25vh]"}`}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-[#011412]">Plan Media</h3>
+            <button className="p-1 text-gray-400 hover:text-gray-600">
+              <MoreHorizontal size={18} />
+            </button>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {programDetails?.planMedia?.map((media, index) => (
+              <MediaItem
+                key={index}
+                name={media.name}
+                size={media.size}
+                type={media.type}
+                url={media.url}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TherapyPlanSection = ({ therapyPlan }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div
+        className="flex items-center justify-between cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <h4 className="text-sm font-bold text-[#011412]">Therapy Plan</h4>
+        <button className="p-1 hover:bg-gray-50 rounded-lg transition-colors">
+          {isExpanded ? (
+            <ChevronUp size={16} className="text-gray-400" />
+          ) : (
+            <ChevronDown size={16} className="text-gray-400" />
+          )}
+        </button>
+      </div>
+
+      {isExpanded && (
+        <div className="flex flex-col gap-4">
+          {therapyPlan.map((item, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-[#F8F9FA] rounded-xl border border-gray-50"
+            >
+              <DetailField label="Therapy Type" value={item.type} />
+              <DetailField label="Notes" value={item.notes} />
+              <DetailField label="URL" value={item.url} isLink />
+              <DetailField label="Media" value={item.mediaName} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DetailField = ({ label, value, isLink = false }) => (
+  <div className="flex flex-col gap-1.5">
+    <label className="text-xs font-semibold text-[#66706D] uppercase tracking-wider">
+      {label}
+    </label>
+    {isLink && value ? (
+      <a
+        href={value}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-sm text-[#9e5608] hover:underline break-all"
+      >
+        {value}
+      </a>
+    ) : (
+      <p className="text-sm text-[#011412] break-words leading-relaxed">
+        {value || "-"}
+      </p>
+    )}
+  </div>
+);
+
+const MediaItem = ({ name, size, type, url }) => {
+  const getIcon = () => {
+    if (type === "pdf") {
+      return (
+        <div className="w-10 h-10 bg-[#FFF4E6] rounded-lg flex items-center justify-center">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
+              stroke="#FF9500"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M14 2V8H20"
+              stroke="#FF9500"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+      );
+    }
+    return (
+      <div className="w-10 h-10 bg-[#EBF3F2] rounded-lg flex items-center justify-center">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            x="3"
+            y="3"
+            width="18"
+            height="18"
+            rx="2"
+            stroke="#9e5608"
+            strokeWidth="2"
+          />
+          <circle cx="8.5" cy="8.5" r="1.5" fill="#9e5608" />
+          <path
+            d="M21 15L16 10L5 21"
+            stroke="#9e5608"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    );
+  };
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-3 p-3 bg-[#F8F9FA] rounded-lg border border-gray-50 hover:border-gray-200 transition-colors cursor-pointer"
+    >
+      {getIcon()}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-[#011412] truncate">{name}</p>
+        {size ? (
+          <p className="text-[10px] text-[#66706D] mt-0.5">
+            {type.toUpperCase()} • {size}
+          </p>
+        ) : (
+          <p className="text-[10px] text-[#66706D] mt-0.5">
+            {type.toUpperCase()}
+          </p>
+        )}
+      </div>
+    </a>
+  );
+};
