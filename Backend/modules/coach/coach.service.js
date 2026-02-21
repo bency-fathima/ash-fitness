@@ -97,7 +97,7 @@ export const createCoach = async (coach) => {
 
   await sendEmail({
     to: coach.email,
-    subject: "Welcome to TwoFit - Your Login Credentials",
+    subject: "Welcome to fitness - Your Login Credentials",
     html: `
       <!DOCTYPE html>
       <html>
@@ -114,7 +114,7 @@ export const createCoach = async (coach) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>Welcome to TwoFit!</h1>
+            <h1>Welcome to fitness!</h1>
           </div>
           <div class="content">
             <p>Hello <strong>${coach.fullname}</strong>,</p>
@@ -132,7 +132,7 @@ export const createCoach = async (coach) => {
             </div>
           </div>
           <div class="footer">
-            <p>&copy; ${new Date().getFullYear()} TwoFit. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} fitness. All rights reserved.</p>
             <p>This email was sent to ${coach.email}</p>
           </div>
         </div>

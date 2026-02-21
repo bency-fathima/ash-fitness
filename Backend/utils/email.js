@@ -24,7 +24,7 @@ export async function sendEmail({ to, subject, html }) {
   initSendGrid();
 
   return sgMail.send({
-    from: `TwoFit App <${process.env.SENDGRID_FROM_EMAIL}>`,
+    from: `fitness App <${process.env.SENDGRID_FROM_EMAIL}>`,
     to,
     subject,
     html,

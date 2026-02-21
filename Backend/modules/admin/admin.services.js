@@ -60,7 +60,7 @@ export const addNewAdmin = async (adminData) => {
 
   await sendEmail({
     to: adminData.email,
-    subject: "Welcome to TwoFit - Your Login Credentials",
+    subject: "Welcome to fitness - Your Login Credentials",
     html: `
       <!DOCTYPE html>
       <html>
@@ -77,7 +77,7 @@ export const addNewAdmin = async (adminData) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>Welcome to TwoFit!</h1>
+            <h1>Welcome to fitness!</h1>
           </div>
           <div class="content">
             <p>Hello <strong>${adminData.fullname}</strong>,</p>
@@ -95,7 +95,7 @@ export const addNewAdmin = async (adminData) => {
             </div>
           </div>
           <div class="footer">
-            <p>&copy; ${new Date().getFullYear()} TwoFit. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} fitness. All rights reserved.</p>
             <p>This email was sent to ${adminData.email}</p>
           </div>
         </div>

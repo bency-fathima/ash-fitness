@@ -39,7 +39,7 @@ export const createHead = async (head) => {
 
   await sendEmail({
     to: head.email,
-    subject: "Welcome to TwoFit - Your Login Credentials",
+    subject: "Welcome to fitness - Your Login Credentials",
     html: `
       <!DOCTYPE html>
       <html>
@@ -56,7 +56,7 @@ export const createHead = async (head) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>Welcome to TwoFit!</h1>
+            <h1>Welcome to fitness!</h1>
           </div>
           <div class="content">
             <p>Hello <strong>${head.name}</strong>,</p>
@@ -74,7 +74,7 @@ export const createHead = async (head) => {
             </div>
           </div>
           <div class="footer">
-            <p>&copy; ${new Date().getFullYear()} TwoFit. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} fitness. All rights reserved.</p>
             <p>This email was sent to ${head.email}</p>
           </div>
         </div>

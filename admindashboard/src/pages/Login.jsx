@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 
 const Login = () => {
   useEffect(() => {
-    document.title = "Login | Twofit";
+    document.title = "Login | fitness";
   }, []);
   const navigate = useNavigate();
   const dispatch = useDispatch();

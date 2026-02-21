@@ -8,7 +8,7 @@ import { toast } from "react-toastify";
 
 const ForgotPasswordEmail = () => {
   useEffect(() => {
-    document.title = "Forgot Password | Twofit";
+    document.title = "Forgot Password | fitness";
   }, []);
 
   const navigate = useNavigate();

@@ -19,7 +19,7 @@ const ChastList = ({
     <div className="w-full h-full flex flex-col rounded-lg overflow-hidden">
       {/* Mobile Header - Only visible on mobile */}
       <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b">
-        <h1 className="text-[#9e5608] text-xl font-semibold">twofit</h1>
+        <h1 className="text-[#9e5608] text-xl font-semibold">fitness</h1>
         <div className="flex items-center gap-2">
           <button className="p-2">
             <Bell size={20} className="text-gray-700" />

@@ -213,7 +213,7 @@ const ChatWindow = ({
               <ArrowLeft size={20} className="text-gray-700" />
             </button>
             <div className="flex-1">
-              <h1 className="text-[#9e5608] text-lg font-semibold">twofit</h1>
+              <h1 className="text-[#9e5608] text-lg font-semibold">fitness</h1>
             </div>
             <div className="flex items-center gap-2">
               <button className="p-2">

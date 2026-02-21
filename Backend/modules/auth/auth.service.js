@@ -77,7 +77,7 @@ export const adminCreateUser = async (userData) => {
 
    await sendEmail({
     to: userData.email,
-    subject: "Welcome to TwoFit - Your Login Credentials",
+    subject: "Welcome to Fitness - Your Login Credentials",
     html: `
       <!DOCTYPE html>
       <html>
@@ -94,7 +94,7 @@ export const adminCreateUser = async (userData) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>Welcome to TwoFit!</h1>
+            <h1>Welcome to Fitness!</h1>
           </div>
           <div class="content">
             <p>Hello <strong>${userData.fullname}</strong>,</p>
@@ -112,7 +112,7 @@ export const adminCreateUser = async (userData) => {
             </div>
           </div>
           <div class="footer">
-            <p>&copy; ${new Date().getFullYear()} TwoFit. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} fitness. All rights reserved.</p>
             <p>This email was sent to ${userData.email}</p>
           </div>
         </div>
@@ -202,7 +202,7 @@ export const forgotPassword = async (email) => {
 
   await sendEmail({
     to: user.email,
-    subject: "TwoFit - Password Reset OTP",
+    subject: "fitness - Password Reset OTP",
     html: `
       <!DOCTYPE html>
       <html>
@@ -220,7 +220,7 @@ export const forgotPassword = async (email) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>TwoFit Password Reset</h1>
+            <h1>fitness Password Reset</h1>
           </div>
           <div class="content">
             <p>Hello <strong>${user.name || "User"}</strong>,</p>
@@ -237,7 +237,7 @@ export const forgotPassword = async (email) => {
             </div>
           </div>
           <div class="footer">
-            <p>&copy; ${new Date().getFullYear()} TwoFit. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} fitness. All rights reserved.</p>
             <p>This email was sent to ${user.email}</p>
           </div>
         </div>
@@ -347,7 +347,7 @@ export const resetPassword = async ({ email, otp, newPassword }) => {
 
     await sendEmail({
       to: user.email,
-      subject: "TwoFit - Password Reset Successful",
+      subject: "fitness - Password Reset Successful",
       html: `
         <!DOCTYPE html>
         <html>
@@ -370,10 +370,10 @@ export const resetPassword = async ({ email, otp, newPassword }) => {
             <div class="content">
               <p>Hello <strong>${user.name || "User"}</strong>,</p>
               <div class="success">✓ Your password has been successfully reset!</div>
-              <p>You can now log in to your TwoFit account using your new password.</p>
+              <p>You can now log in to your fitness account using your new password.</p>
               <div class="warning">
                 <strong>Security Notice:</strong><br>
-                If you did not perform this password reset, please contact our support team immediately at support@twofit.com
+                If you did not perform this password reset, please contact our support team immediately at support@fitness.com
               </div>
               <p>For your security:</p>
               <ul>
@@ -383,7 +383,7 @@ export const resetPassword = async ({ email, otp, newPassword }) => {
               </ul>
             </div>
             <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} TwoFit. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} fitness. All rights reserved.</p>
               <p>Password reset completed at ${new Date().toLocaleString()}</p>
             </div>
           </div>
