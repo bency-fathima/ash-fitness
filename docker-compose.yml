@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./Backend
+    container_name: twofit_backend
+    env_file:
+      - ./Backend/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - redis
+    volumes:
+      - backend_uploads:/app/uploads
+    restart: unless-stopped
+
+  frontend:
+    build: ./admindashboard
+    container_name: twofit_frontend
+    env_file:
+      - ./admindashboard/.env
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: twofit_redis
+    command: redis-server --requirepass newRedisPassword
+    env_file:
+      - ./Backend/.env
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  backend_uploads:
+  redis_data:
